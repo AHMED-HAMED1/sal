@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول الميزانية والمصروفات الشهرية</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f2f2f7;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 {
+            color: #1c1c1e;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .top-bar {
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        .top-bar label {
+            font-weight: bold;
+            color: #3a3a3c;
+            font-size: 14px;
+        }
+        .top-bar input {
+            padding: 8px 10px;
+            border: 1px solid #c6c6c8;
+            border-radius: 8px;
+            font-size: 15px;
+            text-align: center;
+            background: #f9f9fb;
+        }
+        .table-container {
+            width: 100%;
+            max-width: 450px;
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            overflow: hidden;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #e5e5ea;
+            padding: 10px 4px;
+        }
+        th {
+            background-color: #e5e5ea;
+            color: #1c1c1e;
+            font-weight: bold;
+        }
+        td.category-name {
+            font-weight: bold;
+            background-color: #f2f2f7;
+            text-align: right;
+            padding-right: 12px;
+            color: #1c1c1e;
+        }
+        input.cost-input {
+            width: 75px;
+            padding: 6px;
+            border: 1px solid #c6c6c8;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 14px;
+        }
+        /* إخفاء أسهم زيادة ونقص الأرقام الافتراضية لشكل أكثر ترتيباً */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        .summary-section {
+            width: 100%;
+            max-width: 450px;
+            background: #ffffff;
+            padding: 15px 20px;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            box-sizing: border-box;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f2f2f7;
+            font-size: 15px;
+            font-weight: bold;
+            color: #3a3a3c;
+        }
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+        .total-row {
+            background-color: #e5e5ea;
+            font-weight: bold;
+        }
+        .negative {
+            color: #ff3b30 !important;
+        }
+        .positive {
+            color: #007aff;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>جدول الميزانية الشهرية</h2>
+
+    <!-- شريط اختيار الشهر والراتب في الأعلى -->
+    <div class="top-bar">
+        <div>
+            <label for="currentMonth">الشهر: </label>
+            <input type="month" id="currentMonth" onchange="loadMonthData()">
+        </div>
+        <div>
+            <label for="salaryInput">الراتب: </label>
+            <input type="number" id="salaryInput" value="5000" oninput="calculateBudget()" style="width: 90px;">
+        </div>
+    </div>
+
+    <!-- الجدول الرئيسي -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>الأصناف</th>
+                    <th>التكلفة</th>
+                    <th>النسبة من الراتب</th>
+                    <th>دفع</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- يتم تعبئتها ديناميكياً -->
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td>المجموع</td>
+                    <td id="totalCost">0</td>
+                    <td id="totalPercent">0.0%</td>
+                    <td>-</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- ملخص المتبقي والراتب -->
+    <div class="summary-section">
+        <div class="summary-row">
+            <span>الراتب:</span>
+            <span id="sumSalary">5,000</span>
+        </div>
+        <div class="summary-row">
+            <span>المتبقي (نسبة):</span>
+            <span id="remPercent">100.0%</span>
+        </div>
+        <div class="summary-row">
+            <span>المتبقي (أرقام):</span>
+            <span id="remAmount" class="positive">5,000</span>
+        </div>
+    </div>
+
+<script>
+const categories = [
+    "إيجار البيت",
+    "الأقساط",
+    "الكهرباء",
+    "راتب الخادمة",
+    "مصروف امي",
+    "مصروف الاهل",
+    "تابي وتمارا",
+    "مبالغ اخرى",
+    "المخالفات"
+];
+
+// تعيين الشهر الحالي افتراضياً عند فتح الصفحة أول مرة
+const monthInput = document.getElementById('currentMonth');
+const now = new Date();
+const year = now.getFullYear();
+const month = String(now.getMonth() + 1).padStart(2, '0');
+monthInput.value = `${year}-${month}`;
+
+function initTable() {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    categories.forEach((cat, index) => {
+        tbody.innerHTML += `
+            <tr>
+                <td class="category-name">${cat}</td>
+                <td><input type="number" class="cost-input" id="cost_${index}" placeholder="0" oninput="calculateBudget()"></td>
+                <td id="percent_${index}">0.0%</td>
+                <td><input type="checkbox" id="check_${index}" onchange="saveData()"></td>
+            </tr>
+        `;
+    });
+    loadMonthData();
+}
+
+function getStorageKey() {
+    return `budget_data_${monthInput.value}`;
+}
+
+function saveData() {
+    const data = {
+        salary: parseFloat(document.getElementById('salaryInput').value) || 0,
+        items: []
+    };
+    categories.forEach((cat, index) => {
+        data.items.push({
+            cost: parseFloat(document.getElementById(`cost_${index}`).value) || 0,
+            checked: document.getElementById(`check_${index}`).checked
+        });
+    });
+    localStorage.setItem(getStorageKey(), JSON.stringify(data));
+}
+
+function loadMonthData() {
+    const saved = JSON.parse(localStorage.getItem(getStorageKey()));
+    if (saved) {
+        document.getElementById('salaryInput').value = saved.salary !== undefined ? saved.salary : 5000;
+        categories.forEach((cat, index) => {
+            if (saved.items[index]) {
+                // تجنب وضع صفر صريح إذا كانت القيمة صفر ليسهل الكتابة في الحقل
+                document.getElementById(`cost_${index}`).value = saved.items[index].cost === 0 ? '' : saved.items[index].cost;
+                document.getElementById(`check_${index}`).checked = saved.items[index].checked;
+            }
+        });
+    } else {
+        document.getElementById('salaryInput').value = 5000;
+        categories.forEach((cat, index) => {
+            document.getElementById(`cost_${index}`).value = '';
+            document.getElementById(`check_${index}`).checked = false;
+        });
+    }
+    // نقوم بالحساب بدون تكرار الاستدعاء لـ saveData من داخل الحساب لتفادي تعليق الحقول
+    calculateBudget(false); 
+}
+
+function calculateBudget(shouldSave = true) {
+    const salary = parseFloat(document.getElementById('salaryInput').value) || 0;
+    document.getElementById('sumSalary').innerText = salary.toLocaleString();
+    
+    let totalCost = 0;
+    let totalPercent = 0;
+
+    categories.forEach((cat, index) => {
+        const cost = parseFloat(document.getElementById(`cost_${index}`).value) || 0;
+        let percent = 0;
+        if (salary > 0) {
+            percent = (cost / salary) * 100;
+        }
+        document.getElementById(`percent_${index}`).innerText = percent.toFixed(1) + '%';
+        totalCost += cost;
+        totalPercent += percent;
+    });
+
+    document.getElementById('totalCost').innerText = totalCost.toLocaleString();
+    document.getElementById('totalPercent').innerText = totalPercent.toFixed(1) + '%';
+
+    const remAmount = salary - totalCost;
+    const remPercent = 100 - totalPercent;
+
+    const remAmountElem = document.getElementById('remAmount');
+    const remPercentElem = document.getElementById('remPercent');
+
+    remAmountElem.innerText = remAmount.toLocaleString();
+    remPercentElem.innerText = remPercent.toFixed(1) + '%';
+
+    if (remAmount < 0) {
+        remAmountElem.className = "negative";
+        remPercentElem.className = "negative";
+    } else {
+        remAmountElem.className = "positive";
+        remPercentElem.className = "positive";
+    }
+
+    if (shouldSave) {
+        saveData();
+    }
+}
+
+// تشغيل الجدول عند تحميل الصفحة
+initTable();
+</script>
+</body>
+</html>
